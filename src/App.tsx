@@ -15,7 +15,8 @@ const CRITICAL_ILLUSTRATIONS = [
   "https://i.postimg.cc/3wpJtHJs/Chat-GPT-Image-25-ago-2026-18-24-14-removebg-preview.png",
   "https://i.postimg.cc/jSmG3wD2/Chat-GPT-Image-25-ago-2026-18-07-51-removebg-preview.png",
   "https://i.postimg.cc/Ss2LTRzx/Chat-GPT-Image-25-ago-2026-18-16-40-removebg-preview.png",
-  "https://i.postimg.cc/qRVgrv5C/Chat-GPT-Image-25-ago-2026-18-22-39-removebg-preview.png"
+  "https://i.postimg.cc/qRVgrv5C/Chat-GPT-Image-25-ago-2026-18-22-39-removebg-preview.png",
+  "https://i.postimg.cc/VNCggRrk/Chat-GPT-Image-27-ago-2026-20-44-28-removebg-preview-(1).png"
 ];
 
 // Below-the-fold components loaded dynamically for maximum initial load performance

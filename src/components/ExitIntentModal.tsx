@@ -3,314 +3,336 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  X, Sparkles, ArrowRight, ShieldCheck, Clock, CheckCircle2, 
-  PiggyBank, Gift, Flame, HeartHandshake, AlertCircle 
-} from 'lucide-react';
-import { Button } from './ui/design-system';
+import { X, ArrowRight } from 'lucide-react';
 import { handleHotmartCheckout } from '../utils/checkout';
 
-const STORAGE_KEY = 'pequeno_inversionista_exit_intent_seen';
+const PUPPY_IMAGE_URL = "https://i.postimg.cc/VNCggRrk/Chat-GPT-Image-27-ago-2026-20-44-28-removebg-preview-(1).png";
+const STORAGE_KEY = 'pi_exit_intent_shown_v1';
+
+declare global {
+  interface Window {
+    openExitIntentModal?: () => void;
+  }
+}
 
 export default function ExitIntentModal() {
   const [isOpen, setIsOpen] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(599); // 09:59 minutes countdown
+  const [countdown, setCountdown] = useState(10);
   const hasTriggeredRef = useRef(false);
-  const scrollPosRef = useRef(0);
-  const lastScrollTimeRef = useRef(Date.now());
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Countdown timer for session urgency
-  useEffect(() => {
-    if (!isOpen) return;
-    const interval = setInterval(() => {
-      setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isOpen]);
-
-  const formatTimer = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const triggerModal = useCallback(() => {
-    if (hasTriggeredRef.current) return;
-
-    hasTriggeredRef.current = true;
-    setIsOpen(true);
+  // Check if previously dismissed in this session
+  const isEligible = useCallback(() => {
+    if (hasTriggeredRef.current) return false;
+    try {
+      if (typeof window !== 'undefined') {
+        const sessionShown = sessionStorage.getItem(STORAGE_KEY);
+        if (sessionShown) return false;
+      }
+    } catch {
+      // Fallback if sessionStorage is disabled/blocked
+    }
+    return true;
   }, []);
 
-  const handleClose = () => {
-    setIsOpen(false);
-    // Allow re-testing after 5 seconds
-    setTimeout(() => {
-      hasTriggeredRef.current = false;
-    }, 5000);
-  };
-
-  useEffect(() => {
-    // Expose a helper on window for easy testing in console
-    if (typeof window !== 'undefined') {
-      (window as unknown as { triggerExitIntent?: () => void }).triggerExitIntent = () => {
-        setIsOpen(true);
-      };
-    }
-    
-    // Arm quickly (800ms) after page loads
-    let isArmed = false;
-    const armTimer = setTimeout(() => {
-      isArmed = true;
-    }, 800);
-
-    // 1. DESKTOP EXIT-INTENT: Detect mouse leaving viewport towards browser toolbar/tabs
-    const handleMouseLeave = (e: MouseEvent) => {
-      if (!isArmed || hasTriggeredRef.current) return;
-      // Trigger if cursor exits towards the top
-      if (e.clientY <= 30) {
-        triggerModal();
-      }
-    };
-
-    // When cursor is close to the top bar
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isArmed || hasTriggeredRef.current) return;
-      if (e.clientY <= 12) {
-        triggerModal();
-      }
-    };
-
-    // Also detect mouseout with null relatedTarget (cursor leaves window)
-    const handleMouseOut = (e: MouseEvent) => {
-      if (!isArmed || hasTriggeredRef.current) return;
-      if (!e.relatedTarget && e.clientY <= 35) {
-        triggerModal();
-      }
-    };
-
-    // 2. MOBILE EXIT-INTENT:
-    // When user scrolls down significantly (>400px) and suddenly scrolls rapidly upwards
-    const handleScroll = () => {
-      if (!isArmed || hasTriggeredRef.current) return;
-      const currentScroll = window.scrollY;
-      const now = Date.now();
-      const timeDiff = now - lastScrollTimeRef.current;
-
-      if (timeDiff > 50 && timeDiff < 300) {
-        const delta = scrollPosRef.current - currentScroll;
-        // User scrolled down deep and is now rapidly flicking upwards to URL bar / exit
-        if (scrollPosRef.current > 600 && delta > 180) {
-          triggerModal();
-        }
-      }
-
-      scrollPosRef.current = currentScroll;
-      lastScrollTimeRef.current = now;
-    };
-
-    // 3. INACTIVITY / MOBILE TAB SWITCH:
-    // If user switches away from the tab or is idle for 60 seconds after scrolling
-    const handleVisibilityChange = () => {
-      if (!isArmed || hasTriggeredRef.current) return;
-      if (document.visibilityState === 'hidden' && window.scrollY > 400) {
-        // Trigger so when they tab back, it's there
-        triggerModal();
-      }
-    };
-
-    // 4. BACK BUTTON INTERCEPT (History API popstate)
-    const handlePopState = () => {
-      if (!hasTriggeredRef.current && isArmed) {
-        triggerModal();
-      }
-    };
-
-    // Push state gently so the back button catches exit intent once
+  const openModal = useCallback(() => {
+    if (!isEligible()) return;
+    hasTriggeredRef.current = true;
     try {
-      window.history.pushState({ page: 'landing' }, '');
+      sessionStorage.setItem(STORAGE_KEY, 'true');
     } catch {
-      // Ignore
+      // Ignore storage errors
     }
+    setIsOpen(true);
+    setCountdown(10);
+  }, [isEligible]);
 
-    document.addEventListener('mouseleave', handleMouseLeave);
-    document.addEventListener('mouseout', handleMouseOut);
-    document.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('popstate', handlePopState);
+  const handleClose = useCallback(() => {
+    setIsOpen(false);
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+  }, []);
 
-    // Escape key listener to close cleanly
+  // 10 to 0 seconds countdown for the gentle pause
+  useEffect(() => {
+    if (!isOpen) return;
+
+    timerIntervalRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, [isOpen]);
+
+  // Handle ESC key
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
         handleClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, handleClose]);
+
+  // Exit intent detection logic (Desktop + Mobile)
+  useEffect(() => {
+    // Expose test helper in window for preview / QA
+    window.openExitIntentModal = () => {
+      setIsOpen(true);
+      setCountdown(10);
+    };
+
+    let minEngagementTimeout: NodeJS.Timeout;
+    let canTrigger = false;
+
+    // Wait at least 6 seconds of engagement before arming exit-intent
+    minEngagementTimeout = setTimeout(() => {
+      canTrigger = true;
+    }, 6000);
+
+    // Desktop: detect mouse leaving top of viewport (e.clientY <= 10)
+    const handleMouseLeave = (e: MouseEvent) => {
+      if (!canTrigger) return;
+      if (e.clientY <= 10 && isEligible()) {
+        openModal();
+      }
+    };
+
+    const handleMouseOut = (e: MouseEvent) => {
+      if (!canTrigger) return;
+      // When mouse leaves the window entirely towards the top
+      if (!e.relatedTarget && e.clientY <= 12 && isEligible()) {
+        openModal();
+      }
+    };
+
+    // Mobile: detection via history popstate / back button
+    // Pushes dummy history state so if user taps back to leave, popup appears
+    const handlePopState = () => {
+      if (canTrigger && isEligible()) {
+        openModal();
+        // Push state again so user remains on page if they close modal
+        try {
+          window.history.pushState({ exitIntentShown: true }, '');
+        } catch {
+          // Ignore
+        }
+      }
+    };
+
+    // Push state after engagement delay to capture back button
+    const historyTimer = setTimeout(() => {
+      try {
+        if (isEligible() && window.history && window.history.pushState) {
+          window.history.pushState({ page: 'pequeno-inversionista' }, '');
+          window.addEventListener('popstate', handlePopState);
+        }
+      } catch {
+        // Ignore
+      }
+    }, 7000);
+
+    // Mobile: rapid scroll-up after scrolling deep down into page
+    let maxScroll = 0;
+    let lastScrollY = window.scrollY;
+
+    const handleScroll = () => {
+      if (!canTrigger) return;
+      const currentY = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrollPercentage = docHeight > 0 ? (currentY / docHeight) * 100 : 0;
+
+      if (scrollPercentage > maxScroll) {
+        maxScroll = scrollPercentage;
+      }
+
+      // If user explored > 35% and then rapidly scrolls back towards the very top
+      if (maxScroll > 35 && currentY < 60 && lastScrollY - currentY > 50 && isEligible()) {
+        openModal();
+      }
+      lastScrollY = currentY;
+    };
+
+    document.addEventListener('mouseleave', handleMouseLeave);
+    document.addEventListener('mouseout', handleMouseOut);
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
-      clearTimeout(armTimer);
+      clearTimeout(minEngagementTimeout);
+      clearTimeout(historyTimer);
       document.removeEventListener('mouseleave', handleMouseLeave);
       document.removeEventListener('mouseout', handleMouseOut);
-      document.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('scroll', handleScroll);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('keydown', handleKeyDown);
+      delete window.openExitIntentModal;
     };
-  }, [isOpen, triggerModal]);
+  }, [isEligible, openModal]);
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div 
-          id="exit-intent-modal-overlay"
-          className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto"
-          onClick={handleClose}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="exit-intent-title"
+        <div
+          className="exit-intent-overlay fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-slate-950/75 backdrop-blur-xs"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              handleClose();
+            }
+          }}
         >
           <motion.div
-            id="exit-intent-modal-card"
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={{ opacity: 0, scale: 0.94, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            exit={{ opacity: 0, scale: 0.94, y: 10 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="exit-intent-modal relative w-full max-w-[540px] max-h-[92vh] flex flex-col rounded-3xl bg-white border border-slate-100 shadow-2xl overflow-hidden text-slate-800"
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border-2 border-emerald-400 overflow-hidden my-auto"
           >
-            {/* Top decorative header gradient */}
-            <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 px-5 py-3 text-white flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-2">
-                <span className="flex h-2.5 w-2.5 rounded-full bg-amber-400 animate-ping" />
-                <span className="text-[11px] sm:text-xs font-black tracking-wider uppercase flex items-center gap-1.5">
-                  <Flame className="h-3.5 w-3.5 text-amber-300 fill-amber-300" />
-                  ¡Pausa de 10 segundos antes de irte!
-                </span>
-              </div>
-
-              {/* Countdown timer badge */}
-              <div className="flex items-center gap-1.5 bg-black/25 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-black text-amber-200 border border-white/20">
-                <Clock className="h-3 w-3 text-amber-300" />
-                <span>{formatTimer(timeLeft)}</span>
-              </div>
-            </div>
-
-            {/* Close Button */}
+            {/* Top Close Button (X) */}
             <button
-              onClick={handleClose}
               type="button"
-              className="absolute top-2.5 right-3.5 z-20 h-7 w-7 rounded-full bg-white/20 hover:bg-white/40 text-white flex items-center justify-center transition-colors"
+              onClick={handleClose}
               aria-label="Cerrar ventana"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 h-8 w-8 rounded-full bg-slate-100/90 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer shadow-xs"
             >
               <X className="h-4 w-4 stroke-[2.5]" />
             </button>
 
-            {/* Modal Body */}
-            <div className="p-5 sm:p-7 text-center">
-              {/* Visual Pattern Interrupt Badge & Mascot */}
-              <div className="flex items-center justify-center gap-3 mb-3">
-                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-100 via-teal-50 to-amber-100 border border-emerald-200 flex items-center justify-center shadow-inner">
-                  <PiggyBank className="h-8 w-8 text-emerald-600 animate-bounce" />
-                </div>
-                <div className="text-left">
-                  <span className="inline-block px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300">
-                    RUPTURA DE PATRÓN 🎯
+            {/* Scrollable container for mobile responsiveness */}
+            <div className="overflow-y-auto p-4 sm:p-6 sm:px-7 overscroll-contain">
+              
+              {/* 2. Encabezado sutil: Pausa de 10 segundos con recuento de 10 a 0 */}
+              <div className="exit-intent-header flex flex-col items-center gap-1.5 pt-1 mb-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-xs font-extrabold shadow-2xs">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                   </span>
-                  <p className="text-xs font-extrabold text-slate-700 mt-0.5">
-                    El chanchito te vio apuntando a la "X" 😅
-                  </p>
+                  <span>
+                    ¡Pausa de {countdown} {countdown === 1 ? 'segundo' : 'segundos'} antes de irte!
+                  </span>
+                </div>
+                {/* Visual smooth progress track */}
+                <div className="w-36 h-1 bg-amber-100/80 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-amber-500 rounded-full transition-all duration-1000 ease-linear"
+                    style={{ width: `${(countdown / 10) * 100}%` }}
+                  />
                 </div>
               </div>
 
-              {/* Main Catchy Headline (Toque Inesperado y Humor) */}
-              <h3 
-                id="exit-intent-title"
-                className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug"
-              >
-                ¿En serio vas a cerrar la pestaña sin asegurar esta ventaja para tu hijo?
-              </h3>
+              {/* 1. Imagen del perrito - Elemento visual principal */}
+              <div className="flex justify-center my-1 sm:my-2">
+                <img
+                  src={PUPPY_IMAGE_URL}
+                  alt="Perrito Pequeño Inversionista"
+                  className="exit-intent-image h-32 sm:h-40 w-auto object-contain drop-shadow-md select-none pointer-events-none"
+                  referrerPolicy="no-referrer"
+                  loading="eager"
+                />
+              </div>
 
-              {/* Light humor / emotional perspective shift */}
-              <p className="mt-2.5 text-xs sm:text-[13px] text-slate-600 leading-relaxed font-medium">
-                Sabemos que estás a un clic de volver a ver redes o videos de perritos 🐶... pero piensa en esto: 
-                <strong className="text-slate-900 font-bold"> $12 USD es menos de lo que cuesta una pizza familiar</strong>, 
-                y le dará a tu hijo la educación financiera que el 90% de los adultos desearía haber recibido a su edad.
-              </p>
-
-              {/* Value recap card */}
-              <div className="mt-4 bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5 text-left space-y-2">
-                <p className="text-[11px] font-black uppercase tracking-wider text-emerald-700 flex items-center gap-1.5">
-                  <Gift className="h-3.5 w-3.5" /> Todo lo que estás a punto de perder hoy:
+              {/* 3. Contenido principal debajo de la imagen */}
+              <div className="exit-intent-content text-center space-y-1.5 sm:space-y-2 mt-1">
+                <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+                  Prepara a tu hijo para el mundo real. 💼
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed max-w-md mx-auto">
+                  Dale las herramientas para ahorrar de forma inteligente, tomar decisiones financieras audaces y asegurar su independencia futura.
                 </p>
-                <ul className="space-y-1.5 text-xs text-slate-700 font-medium">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>Método Completo Paso a Paso</strong> (de 3 a 16+ años)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>Los 4 Bonos Exclusivos GRATIS</strong> (Banco Familiar, Juegos, Plantillas y Guía)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>Área de Miembros con Acceso Vitalicio 24/7</strong> mediante usuario y clave</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>Garantía Incondicional de 7 Días</strong>: si no te fascina, te devolvemos el 100%</span>
-                  </li>
-                </ul>
+                <p className="text-xs sm:text-sm font-extrabold text-emerald-700">
+                  Invierte hoy en su éxito del mañana.
+                </p>
               </div>
 
-              {/* Price comparison pill */}
-              <div className="mt-4 flex items-center justify-center gap-2 bg-emerald-50 border border-emerald-200 py-1.5 px-3 rounded-xl">
-                <span className="text-xs text-slate-500 line-through font-bold">$37 USD</span>
-                <span className="text-lg sm:text-xl font-black text-emerald-700">$12 USD</span>
-                <span className="text-[10px] font-black text-emerald-800 bg-emerald-200/80 px-2 py-0.5 rounded-md uppercase">
-                  67% DESCUENTO EN ESTA SESIÓN
+              {/* 4. Beneficios organizados en estructura visual compacta */}
+              <div className="exit-intent-benefits mt-3.5 pt-3 border-t border-slate-100">
+                <p className="text-[11px] sm:text-xs font-black text-slate-500 uppercase tracking-wider text-center mb-2">
+                  Todo lo que estás a punto de perder hoy:
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-left">
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/80 rounded-xl p-2 sm:p-2.5">
+                    <span className="text-base shrink-0">🎁</span>
+                    <span className="text-[11px] sm:text-xs font-black text-slate-800 leading-tight">
+                      4 BONOS GRATIS
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/80 rounded-xl p-2 sm:p-2.5">
+                    <span className="text-base shrink-0">📚</span>
+                    <span className="text-[11px] sm:text-xs font-black text-slate-800 leading-tight">
+                      MÉTODO COMPLETO PASO A PASO
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/80 rounded-xl p-2 sm:p-2.5">
+                    <span className="text-base shrink-0">♾️</span>
+                    <span className="text-[11px] sm:text-xs font-black text-slate-800 leading-tight">
+                      ACCESO VITALICIO 24/7
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/80 rounded-xl p-2 sm:p-2.5">
+                    <span className="text-base shrink-0">🛡️</span>
+                    <span className="text-[11px] sm:text-xs font-black text-slate-800 leading-tight">
+                      GARANTÍA DE 7 DÍAS
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. Precio */}
+              <div className="exit-intent-price text-center mt-3 sm:mt-4">
+                <span className="text-xs text-slate-400 line-through font-semibold block">
+                  Antes $37 USD
                 </span>
+                <div className="flex items-baseline justify-center gap-1.5 mt-0.5">
+                  <span className="text-xs font-black text-slate-500 uppercase">HOY</span>
+                  <span className="text-3xl sm:text-4xl font-black text-emerald-600 tracking-tight">
+                    $12
+                  </span>
+                  <span className="text-sm sm:text-base font-extrabold text-slate-700">
+                    USD
+                  </span>
+                </div>
               </div>
 
-              {/* Big CTA Button (Linked with Meta Pixel Tracking) */}
-              <div className="mt-4">
-                <Button
-                  id="btn-exit-intent-checkout"
-                  onClick={handleHotmartCheckout}
-                  variant="primary"
-                  size="lg"
-                  glow
-                  icon={ArrowRight}
-                  iconPosition="right"
-                  className="w-full py-4 text-sm sm:text-base font-black bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-xl shadow-emerald-500/25 transition-all"
-                >
-                  ¡Aprovechar los $12 USD y Probar sin Riesgo! 🚀
-                </Button>
-              </div>
-
-              {/* Security badges & reassurance */}
-              <div className="mt-2.5 flex items-center justify-center gap-3 text-[11px] font-bold text-slate-500">
-                <span className="flex items-center gap-1">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> Compra 100% segura
-                </span>
-                <span>•</span>
-                <span className="flex items-center gap-1">
-                  <HeartHandshake className="h-3.5 w-3.5 text-emerald-600" /> Garantía 7 días
-                </span>
-              </div>
-
-              {/* Lighthearted Decline Option */}
+              {/* 6. Botón Principal CTA */}
               <div className="mt-3">
                 <button
                   type="button"
-                  onClick={handleClose}
-                  className="text-[11px] sm:text-xs text-slate-400 hover:text-slate-600 underline font-medium transition-colors cursor-pointer"
+                  onClick={(e) => {
+                    handleClose();
+                    handleHotmartCheckout(e);
+                  }}
+                  className="exit-intent-cta w-full py-3.5 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-black text-sm sm:text-base tracking-wide shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
-                  No gracias, prefiero que mi hijo aprenda finanzas cuando le cobren su primera tarjeta 😅
+                  <span>SÍ, QUIERO ENSEÑARLE FINANZAS</span>
+                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
                 </button>
               </div>
+
+              {/* 7. Opción para cerrar discreta */}
+              <div className="text-center mt-2.5">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="exit-intent-dismiss text-[11px] sm:text-xs text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2 cursor-pointer font-medium"
+                >
+                  No, prefiero que aprenda a golpes con el dinero 😬
+                </button>
+              </div>
+
             </div>
           </motion.div>
         </div>
