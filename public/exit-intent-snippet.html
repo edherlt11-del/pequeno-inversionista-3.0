@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pop-up de Intención de Salida (Exit-Intent)</title>
+  <style>
+    /* =========================================================
+       ESTILOS DEL MODAL DE INTENCIÓN DE SALIDA (EXIT-INTENT)
+       ========================================================= */
+    #exit-intent-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(2, 6, 23, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 999999;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    #exit-intent-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    #exit-intent-modal {
+      position: relative;
+      background: #ffffff;
+      width: 100%;
+      max-width: 520px;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 2px #34d399;
+      transform: scale(0.9) translateY(20px);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      box-sizing: border-box;
+    }
+
+    #exit-intent-overlay.active #exit-intent-modal {
+      transform: scale(1) translateY(0);
+    }
+
+    /* Barra Superior */
+    .exit-top-bar {
+      background: linear-gradient(135deg, #059669 0%, #0d9488 50%, #047857 100%);
+      padding: 12px 20px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .exit-top-tag {
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .exit-timer-badge {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: bold;
+      color: #fde68a;
+    }
+
+    /* Botón Cerrar (X) */
+    .exit-close-btn {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      width: 28px;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      border-radius: 50%;
+      color: #ffffff;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease, transform 0.2s ease;
+      line-height: 1;
+    }
+
+    .exit-close-btn:hover {
+      background: rgba(255, 255, 255, 0.4);
+      transform: rotate(90deg);
+    }
+
+    /* Cuerpo del Modal */
+    .exit-content {
+      padding: 24px;
+      text-align: center;
+    }
+
+    .exit-mascot-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      margin-bottom: 12px;
+    }
+
+    .exit-mascot-emoji {
+      font-size: 24px;
+      animation: floatPig 2s infinite ease-in-out;
+    }
+
+    @keyframes floatPig {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .exit-mascot-text {
+      font-size: 12px;
+      font-weight: 800;
+      color: #166534;
+      text-align: left;
+    }
+
+    .exit-title {
+      font-size: 22px;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1.25;
+      margin: 0 0 10px 0;
+      letter-spacing: -0.02em;
+    }
+
+    .exit-description {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #475569;
+      margin: 0 0 16px 0;
+    }
+
+    .exit-description strong {
+      color: #0f172a;
+    }
+
+    /* Caja de Valor / Beneficios */
+    .exit-benefits-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 14px;
+      text-align: left;
+      margin-bottom: 16px;
+    }
+
+    .exit-benefits-title {
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #059669;
+      margin: 0 0 8px 0;
+    }
+
+    .exit-benefits-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .exit-benefits-list li {
+      font-size: 12px;
+      color: #334155;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      line-height: 1.4;
+    }
+
+    .exit-check-icon {
+      color: #10b981;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    /* Precio y Descuento */
+    .exit-price-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .exit-old-price {
+      font-size: 13px;
+      text-decoration: line-through;
+      color: #94a3b8;
+      font-weight: bold;
+    }
+
+    .exit-new-price {
+      font-size: 24px;
+      font-weight: 900;
+      color: #047857;
+    }
+
+    .exit-discount-badge {
+      background: #d1fae5;
+      color: #065f46;
+      font-size: 10px;
+      font-weight: 900;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+
+    /* Botón de Checkout Principal */
+    .exit-cta-button {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 900;
+      font-size: 15px;
+      padding: 16px 20px;
+      border-radius: 16px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4);
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .exit-cta-button:hover {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 15px 30px -5px rgba(16, 185, 129, 0.5);
+    }
+
+    /* Garantía y Confianza */
+    .exit-trust-row {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    /* Opción de Salida con Humor */
+    .exit-decline-link {
+      display: inline-block;
+      margin-top: 14px;
+      font-size: 11px;
+      color: #94a3b8;
+      text-decoration: underline;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      transition: color 0.2s;
+    }
+
+    .exit-decline-link:hover {
+      color: #475569;
+    }
+
+    @media (max-width: 480px) {
+      .exit-title { font-size: 19px; }
+      .exit-content { padding: 18px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =========================================================
+       ESTRUCTURA HTML DEL MODAL FLOTANTE (EXIT-INTENT)
+       ========================================================= -->
+  <div id="exit-intent-overlay" aria-hidden="true" role="dialog">
+    <div id="exit-intent-modal">
+      
+      <!-- Barra superior decorativa -->
+      <div class="exit-top-bar">
+        <span class="exit-top-tag">⚡ ¡Pausa de 10 segundos antes de irte!</span>
+        <span class="exit-timer-badge" id="exit-timer">09:59</span>
+        <button class="exit-close-btn" id="exit-close-x" aria-label="Cerrar ventana">&times;</button>
+      </div>
+
+      <!-- Contenido Principal -->
+      <div class="exit-content">
+        <!-- Mascota Chanchito / Ruptura de Patrón -->
+        <div class="exit-mascot-box">
+          <span class="exit-mascot-emoji">🐷</span>
+          <span class="exit-mascot-text">El chanchito del ahorro te vio apuntando a la "X" 😅</span>
+        </div>
+
+        <h3 class="exit-title">
+          ¿En serio vas a cerrar la pestaña sin asegurar esta ventaja para tu hijo?
+        </h3>
+
+        <p class="exit-description">
+          Sabemos que estás a un clic de volver a redes o videos de perritos 🐶... pero 
+          <strong>$12 USD cuesta menos que una pizza</strong> y le dará la educación financiera que el 90% de los adultos desearía haber recibido a su edad.
+        </p>
+
+        <!-- Beneficios que perdería -->
+        <div class="exit-benefits-box">
+          <p class="exit-benefits-title">🎁 Lo que estás a punto de perder hoy:</p>
+          <ul class="exit-benefits-list">
+            <li><span class="exit-check-icon">✓</span> <strong>Método Completo Paso a Paso</strong> (de 3 a 16+ años)</li>
+            <li><span class="exit-check-icon">✓</span> <strong>Los 4 Bonos Exclusivos GRATIS</strong> (Banco Familiar, Juegos y Guías)</li>
+            <li><span class="exit-check-icon">✓</span> <strong>Área de Miembros Vitalicia 24/7</strong> con tu usuario y contraseña</li>
+            <li><span class="exit-check-icon">✓</span> <strong>Garantía Incondicional de 7 Días</strong> (100% libre de riesgo)</li>
+          </ul>
+        </div>
+
+        <!-- Precio con Descuento -->
+        <div class="exit-price-row">
+          <span class="exit-old-price">$37 USD</span>
+          <span class="exit-new-price">$12 USD</span>
+          <span class="exit-discount-badge">67% DESCUENTO</span>
+        </div>
+
+        <!-- Botón CTA con Hotmart y Pixel -->
+        <a 
+          href="https://pay.hotmart.com/O106740525J?checkoutMode=10" 
+          id="exit-cta-btn" 
+          class="exit-cta-button"
+        >
+          ¡Aprovechar los $12 USD y Probar sin Riesgo! 🚀
+        </a>
+
+        <!-- Sellos de confianza -->
+        <div class="exit-trust-row">
+          <span>🔒 Compra 100% Segura</span>
+          <span>•</span>
+          <span>🛡️ Garantía de 7 Días</span>
+        </div>
+
+        <!-- Botón de rechazo con humor -->
+        <div>
+          <button type="button" class="exit-decline-link" id="exit-decline-btn">
+            No gracias, prefiero que mi hijo aprenda finanzas cuando le cobren su primera tarjeta 😅
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       LÓGICA JAVASCRIPT: DETECCIÓN DE EXIT-INTENT Y CONTROLES
+       ========================================================= -->
+  <script>
+    (function () {
+      const overlay = document.getElementById('exit-intent-overlay');
+      const closeX = document.getElementById('exit-close-x');
+      const declineBtn = document.getElementById('exit-decline-btn');
+      const ctaBtn = document.getElementById('exit-cta-btn');
+      const timerElement = document.getElementById('exit-timer');
+
+      let hasTriggered = false;
+      const STORAGE_KEY = 'pequeno_inversionista_exit_intent';
+
+      // 1. Abrir Modal
+      function openModal() {
+        if (hasTriggered) return;
+        if (sessionStorage.getItem(STORAGE_KEY)) return;
+
+        hasTriggered = true;
+        sessionStorage.setItem(STORAGE_KEY, 'true');
+        overlay.classList.add('active');
+        overlay.setAttribute('aria-hidden', 'false');
+      }
+
+      // 2. Cerrar Modal
+      function closeModal() {
+        overlay.classList.remove('active');
+        overlay.setAttribute('aria-hidden', 'true');
+      }
+
+      // 3. Temporizador de cuenta regresiva (10 minutos)
+      let secondsLeft = 599;
+      setInterval(function () {
+        if (secondsLeft > 0) {
+          secondsLeft--;
+          const m = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
+          const s = String(secondsLeft % 60).padStart(2, '0');
+          if (timerElement) timerElement.textContent = m + ':' + s;
+        }
+      }, 1000);
+
+      // 4. DETECCIÓN AUTOMÁTICA DE INTENCIÓN DE SALIDA (EXIT-INTENT)
+      // Se activa cuando el mouse sube hacia la barra superior/pestañas (clientY <= 25px)
+      document.addEventListener('mouseleave', function (e) {
+        if (e.clientY <= 30) {
+          openModal();
+        }
+      });
+
+      document.addEventListener('mousemove', function (e) {
+        if (e.clientY <= 15) {
+          openModal();
+        }
+      });
+
+      // 5. Botones para cerrar el modal si el usuario decide ignorarlo
+      closeX.addEventListener('click', closeModal);
+      declineBtn.addEventListener('click', closeModal);
+
+      // Cerrar si hace clic fuera del modal (en el fondo oscuro)
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) {
+          closeModal();
+        }
+      });
+
+      // Cerrar al presionar la tecla Escape
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && overlay.classList.contains('active')) {
+          closeModal();
+        }
+      });
+
+      // 6. Meta Pixel tracking al hacer clic en el botón de compra
+      ctaBtn.addEventListener('click', function () {
+        if (typeof window.fbq === 'function') {
+          window.fbq('track', 'InitiateCheckout');
+        }
+      });
+
+      // Helper en consola para probarlo al instante: window.testExitIntent()
+      window.testExitIntent = function () {
+        sessionStorage.removeItem(STORAGE_KEY);
+        hasTriggered = false;
+        openModal();
+      };
+    })();
+  </script>
+</body>
+</html>

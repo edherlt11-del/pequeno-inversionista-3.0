@@ -39,46 +39,45 @@ export default function ExitIntentModal() {
   const triggerModal = useCallback(() => {
     if (hasTriggeredRef.current) return;
 
-    // Check session storage so we don't bombard the user multiple times
-    try {
-      if (typeof window !== 'undefined' && sessionStorage.getItem(STORAGE_KEY)) {
-        return;
-      }
-    } catch {
-      // Ignore sessionStorage issues
-    }
-
     hasTriggeredRef.current = true;
-    try {
-      sessionStorage.setItem(STORAGE_KEY, 'true');
-    } catch {
-      // Ignore
-    }
     setIsOpen(true);
   }, []);
 
   const handleClose = () => {
     setIsOpen(false);
+    // Allow re-testing after 5 seconds
+    setTimeout(() => {
+      hasTriggeredRef.current = false;
+    }, 5000);
   };
 
   useEffect(() => {
-    // Expose a helper on window for easy testing in development/preview
+    // Expose a helper on window for easy testing in console
     if (typeof window !== 'undefined') {
       (window as unknown as { triggerExitIntent?: () => void }).triggerExitIntent = () => {
         setIsOpen(true);
       };
     }
-    // Only arm the trigger 4 seconds after page load to prevent accidental firing
+    
+    // Arm quickly (800ms) after page loads
     let isArmed = false;
     const armTimer = setTimeout(() => {
       isArmed = true;
-    }, 3500);
+    }, 800);
 
     // 1. DESKTOP EXIT-INTENT: Detect mouse leaving viewport towards browser toolbar/tabs
     const handleMouseLeave = (e: MouseEvent) => {
       if (!isArmed || hasTriggeredRef.current) return;
-      // Trigger if cursor exits towards the top (y <= 15)
-      if (e.clientY <= 15) {
+      // Trigger if cursor exits towards the top
+      if (e.clientY <= 30) {
+        triggerModal();
+      }
+    };
+
+    // When cursor is close to the top bar
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isArmed || hasTriggeredRef.current) return;
+      if (e.clientY <= 12) {
         triggerModal();
       }
     };
@@ -86,7 +85,7 @@ export default function ExitIntentModal() {
     // Also detect mouseout with null relatedTarget (cursor leaves window)
     const handleMouseOut = (e: MouseEvent) => {
       if (!isArmed || hasTriggeredRef.current) return;
-      if (!e.relatedTarget && e.clientY <= 25) {
+      if (!e.relatedTarget && e.clientY <= 35) {
         triggerModal();
       }
     };
@@ -137,6 +136,7 @@ export default function ExitIntentModal() {
 
     document.addEventListener('mouseleave', handleMouseLeave);
     document.addEventListener('mouseout', handleMouseOut);
+    document.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('scroll', handleScroll, { passive: true });
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('popstate', handlePopState);
@@ -153,6 +153,7 @@ export default function ExitIntentModal() {
       clearTimeout(armTimer);
       document.removeEventListener('mouseleave', handleMouseLeave);
       document.removeEventListener('mouseout', handleMouseOut);
+      document.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('popstate', handlePopState);
