@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: "Outfit", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  
+  --color-celeste-50: #f0f9ff;
+  --color-celeste-100: #e0f2fe;
+  --color-celeste-500: #0ea5e9;
+  --color-celeste-600: #0284c7;
+
+  --color-verde-50: #ecfdf5;
+  --color-verde-100: #d1fae5;
+  --color-verde-500: #10b981;
+  --color-verde-600: #059669;
+
+  --color-amarillo-400: #fbbf24;
+  --color-amarillo-500: #f59e0b;
+}
+
+/* Enforce font-display: swap across all text rendering */
+html, body {
+  font-family: var(--font-sans);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom glow effects and Apple/Stripe-level UI aesthetics */
+.glow-green {
+  box-shadow: 0 10px 40px -10px rgba(16, 185, 129, 0.25);
+}
+
+.glow-celeste {
+  box-shadow: 0 10px 40px -10px rgba(14, 165, 233, 0.25);
+}
+
+.glow-btn {
+  box-shadow: 0 8px 25px -4px rgba(16, 185, 129, 0.45);
+}
+
+.glow-btn:hover {
+  box-shadow: 0 12px 32px -4px rgba(16, 185, 129, 0.6);
+}
+
+.bg-pattern {
+  background-image: radial-gradient(rgba(14, 165, 233, 0.08) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: float-slow 5s ease-in-out infinite;
+}
+
