@@ -6,6 +6,7 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
+import ExitIntentModal from './components/ExitIntentModal';
 import { preloadImages } from './components/ui/FastImage';
 
 const CRITICAL_ILLUSTRATIONS = [
@@ -29,7 +30,6 @@ const FAQ = lazy(() => import('./components/FAQ'));
 const Pricing = lazy(() => import('./components/Pricing'));
 const Footer = lazy(() => import('./components/Footer'));
 const SalesPopups = lazy(() => import('./components/SalesPopups'));
-const ExitIntentModal = lazy(() => import('./components/ExitIntentModal'));
 
 export default function App() {
   useEffect(() => {

@@ -9,7 +9,6 @@ import { X, ArrowRight } from 'lucide-react';
 import { handleHotmartCheckout } from '../utils/checkout';
 
 const PUPPY_IMAGE_URL = "https://i.postimg.cc/VNCggRrk/Chat-GPT-Image-27-ago-2026-20-44-28-removebg-preview-(1).png";
-const STORAGE_KEY = 'pi_exit_intent_shown_v1';
 
 declare global {
   interface Window {
@@ -23,34 +22,16 @@ export default function ExitIntentModal() {
   const hasTriggeredRef = useRef(false);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Check if previously dismissed in this session
-  const isEligible = useCallback(() => {
-    if (hasTriggeredRef.current) return false;
-    try {
-      if (typeof window !== 'undefined') {
-        const sessionShown = sessionStorage.getItem(STORAGE_KEY);
-        if (sessionShown) return false;
-      }
-    } catch {
-      // Fallback if sessionStorage is disabled/blocked
-    }
-    return true;
-  }, []);
-
   const openModal = useCallback(() => {
-    if (!isEligible()) return;
+    if (hasTriggeredRef.current) return;
     hasTriggeredRef.current = true;
-    try {
-      sessionStorage.setItem(STORAGE_KEY, 'true');
-    } catch {
-      // Ignore storage errors
-    }
     setIsOpen(true);
     setCountdown(10);
-  }, [isEligible]);
+  }, []);
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
+    hasTriggeredRef.current = true;
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
     }
@@ -92,40 +73,53 @@ export default function ExitIntentModal() {
   useEffect(() => {
     // Expose test helper in window for preview / QA
     window.openExitIntentModal = () => {
-      setIsOpen(true);
-      setCountdown(10);
+      openModal();
     };
 
-    let minEngagementTimeout: NodeJS.Timeout;
     let canTrigger = false;
+    let hasMovedIntoPage = false;
 
-    // Wait at least 6 seconds of engagement before arming exit-intent
-    minEngagementTimeout = setTimeout(() => {
+    // Small delay (400ms) to ensure page has mounted and avoid instant trigger on load
+    const armTimer = setTimeout(() => {
       canTrigger = true;
-    }, 6000);
+    }, 400);
 
-    // Desktop: detect mouse leaving top of viewport (e.clientY <= 10)
-    const handleMouseLeave = (e: MouseEvent) => {
-      if (!canTrigger) return;
-      if (e.clientY <= 10 && isEligible()) {
+    // Desktop 1: detect mouse moving to the top of viewport (clientY <= 10)
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!canTrigger || hasTriggeredRef.current) return;
+
+      // Track that user has moved cursor into the main area
+      if (e.clientY > 35) {
+        hasMovedIntoPage = true;
+      }
+
+      // Trigger if cursor reaches top boundary (<= 10px) after having moved in page
+      if (hasMovedIntoPage && e.clientY <= 10) {
         openModal();
       }
     };
 
+    // Desktop 2: detect cursor leaving document towards the top
+    const handleMouseLeave = (e: MouseEvent) => {
+      if (!canTrigger || hasTriggeredRef.current) return;
+      if (e.clientY <= 20 || e.clientY <= 0) {
+        openModal();
+      }
+    };
+
+    // Desktop 3: detect mouseout when leaving window/iframe towards the top
     const handleMouseOut = (e: MouseEvent) => {
-      if (!canTrigger) return;
-      // When mouse leaves the window entirely towards the top
-      if (!e.relatedTarget && e.clientY <= 12 && isEligible()) {
+      if (!canTrigger || hasTriggeredRef.current) return;
+      const toElement = e.relatedTarget || (e as unknown as { toElement?: Element }).toElement;
+      if (!toElement && (e.clientY <= 25 || e.clientY <= 0)) {
         openModal();
       }
     };
 
     // Mobile: detection via history popstate / back button
-    // Pushes dummy history state so if user taps back to leave, popup appears
     const handlePopState = () => {
-      if (canTrigger && isEligible()) {
+      if (canTrigger && !hasTriggeredRef.current) {
         openModal();
-        // Push state again so user remains on page if they close modal
         try {
           window.history.pushState({ exitIntentShown: true }, '');
         } catch {
@@ -134,24 +128,24 @@ export default function ExitIntentModal() {
       }
     };
 
-    // Push state after engagement delay to capture back button
+    // Push state after 1.5s to capture mobile back button
     const historyTimer = setTimeout(() => {
       try {
-        if (isEligible() && window.history && window.history.pushState) {
+        if (!hasTriggeredRef.current && window.history && window.history.pushState) {
           window.history.pushState({ page: 'pequeno-inversionista' }, '');
           window.addEventListener('popstate', handlePopState);
         }
       } catch {
         // Ignore
       }
-    }, 7000);
+    }, 1500);
 
-    // Mobile: rapid scroll-up after scrolling deep down into page
+    // Mobile: rapid scroll-up after scrolling down into page
     let maxScroll = 0;
     let lastScrollY = window.scrollY;
 
     const handleScroll = () => {
-      if (!canTrigger) return;
+      if (!canTrigger || hasTriggeredRef.current) return;
       const currentY = window.scrollY;
       const docHeight = document.documentElement.scrollHeight - window.innerHeight;
       const scrollPercentage = docHeight > 0 ? (currentY / docHeight) * 100 : 0;
@@ -160,27 +154,31 @@ export default function ExitIntentModal() {
         maxScroll = scrollPercentage;
       }
 
-      // If user explored > 35% and then rapidly scrolls back towards the very top
-      if (maxScroll > 35 && currentY < 60 && lastScrollY - currentY > 50 && isEligible()) {
+      // If user explored > 30% and then scrolls back towards top
+      if (maxScroll > 30 && currentY < 60 && lastScrollY - currentY > 40) {
         openModal();
       }
       lastScrollY = currentY;
     };
 
+    document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseleave', handleMouseLeave);
-    document.addEventListener('mouseout', handleMouseOut);
+    document.documentElement.addEventListener('mouseleave', handleMouseLeave);
+    window.addEventListener('mouseout', handleMouseOut);
     window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
-      clearTimeout(minEngagementTimeout);
+      clearTimeout(armTimer);
       clearTimeout(historyTimer);
+      document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseleave', handleMouseLeave);
-      document.removeEventListener('mouseout', handleMouseOut);
+      document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('mouseout', handleMouseOut);
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('popstate', handlePopState);
       delete window.openExitIntentModal;
     };
-  }, [isEligible, openModal]);
+  }, [openModal]);
 
   return (
     <AnimatePresence>
