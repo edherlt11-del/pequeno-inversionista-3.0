@@ -28,6 +28,7 @@ const FAQ = lazy(() => import('./components/FAQ'));
 const Pricing = lazy(() => import('./components/Pricing'));
 const Footer = lazy(() => import('./components/Footer'));
 const SalesPopups = lazy(() => import('./components/SalesPopups'));
+const ExitIntentModal = lazy(() => import('./components/ExitIntentModal'));
 
 export default function App() {
   useEffect(() => {
@@ -70,6 +71,7 @@ export default function App() {
       <Suspense fallback={null}>
         <Footer />
         <SalesPopups />
+        <ExitIntentModal />
       </Suspense>
     </div>
   );
