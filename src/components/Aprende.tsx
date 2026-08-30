@@ -5,9 +5,9 @@
 
 import React, { useState } from 'react';
 import { 
-  Globe, Check, Sparkles, TrendingUp, PiggyBank, Award, Flame, Target, Star, ChevronRight, Zap
+  Globe, Check, Sparkles, TrendingUp, PiggyBank, Award, Flame, Zap
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { SectionHeader } from './ui/design-system';
 import { FastImage } from './ui/FastImage';
 
@@ -38,14 +38,15 @@ export default function Aprende() {
       badgeColor: "bg-sky-100 text-sky-800 border-sky-300 shadow-sky-100",
       accentBorder: "border-sky-300 hover:border-sky-500 group-hover:shadow-sky-100 ring-2 ring-sky-500/25",
       glowBg: "from-sky-500/15 via-sky-100/40 to-transparent",
+      glowCircle: "bg-sky-200/70",
       iconBg: "bg-gradient-to-br from-sky-400 to-sky-600 text-white shadow-sky-200",
       isPopular: true,
       image: "https://i.postimg.cc/635NJsht/Chat-GPT-Image-25-ago-2026-17-33-58-removebg-preview.png",
       missions: [
-        { label: "Comprender el valor real del dinero sin dramas ni frustración.", xp: "+40 XP" },
-        { label: "El hábito natural de guardar antes de gastar.", xp: "+35 XP" },
-        { label: "Cuidar sus pertenencias y valorar el esfuerzo familiar.", xp: "+35 XP" },
-        { label: "Cuentos ilustrados que siembran respeto y gratitud.", xp: "+40 XP" }
+        { label: "Valor del dinero", xp: "+40 XP" },
+        { label: "Guardar antes de gastar", xp: "+35 XP" },
+        { label: "Cuidar pertenencias", xp: "+35 XP" },
+        { label: "Gratitud familiar", xp: "+40 XP" }
       ],
       unlockedReward: "Insignia: Guardian del Chanchito 🐷"
     },
@@ -55,7 +56,7 @@ export default function Aprende() {
       levelRank: "Rango: Administrador Pro",
       ageRange: "6 a 11+ años",
       title: "Ahorro Inteligente y Metas",
-      tagline: "Criterio financiero y control de compras por impulso",
+      tagline: "Criterio financiero y control de compras",
       icon: Sparkles,
       xpBadge: "+350 XP",
       coinsBadge: "🔥 4 Misiones",
@@ -64,13 +65,14 @@ export default function Aprende() {
       badgeColor: "bg-emerald-100 text-emerald-900 border-emerald-300 shadow-emerald-100",
       accentBorder: "border-emerald-200 hover:border-emerald-400 group-hover:shadow-emerald-100",
       glowBg: "from-emerald-500/10 via-emerald-100/30 to-transparent",
+      glowCircle: "bg-emerald-200/70",
       iconBg: "bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-emerald-200",
       image: "https://i.postimg.cc/Bb9kSdT6/Chat-GPT-Image-25-ago-2026-17-43-21-removebg-preview-removebg-preview.png",
       missions: [
-        { label: "Poner fin a los caprichos y compras impulsivas.", xp: "+80 XP" },
-        { label: "Fijar metas y alcanzar lo que quiere con su propio ahorro.", xp: "+90 XP" },
-        { label: "Diferenciar con claridad lo necesario de un simple antojo.", xp: "+90 XP" },
-        { label: "Criterio propio para administrar propinas o mesada.", xp: "+90 XP" }
+        { label: "Control de impulsos", xp: "+80 XP" },
+        { label: "Ahorro con metas", xp: "+90 XP" },
+        { label: "Necesidad vs. antojo", xp: "+90 XP" },
+        { label: "Manejo de mesada", xp: "+90 XP" }
       ],
       unlockedReward: "Insignia: Maestro del Presupuesto 🏆"
     },
@@ -80,7 +82,7 @@ export default function Aprende() {
       levelRank: "Rango: Joven Inversionista",
       ageRange: "12 a 16+ años",
       title: "Inversión, Decisiones y Futuro",
-      tagline: "Preparación para el mundo real y la vida adulta",
+      tagline: "Preparación para el mundo real",
       icon: TrendingUp,
       xpBadge: "+500 XP",
       coinsBadge: "🚀 Rango Máximo",
@@ -89,13 +91,14 @@ export default function Aprende() {
       badgeColor: "bg-amber-100 text-amber-900 border-amber-300 shadow-amber-100",
       accentBorder: "border-amber-200 hover:border-amber-400 group-hover:shadow-amber-100",
       glowBg: "from-amber-500/10 via-amber-100/30 to-transparent",
+      glowCircle: "bg-amber-200/70",
       iconBg: "bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-amber-200",
       image: "https://i.postimg.cc/7YLMCKKH/Chat-GPT-Image-25-ago-2026-17-49-47-removebg-preview-removebg-preview.png",
       missions: [
-        { label: "La mentalidad para hacer crecer su dinero a largo plazo.", xp: "+120 XP" },
-        { label: "Práctica con simulador interactivo sin arriesgar nada.", xp: "+130 XP" },
-        { label: "Blindaje contra deudas y trampas financieras juveniles.", xp: "+120 XP" },
-        { label: "Hábitos de independencia que la escuela nunca enseña.", xp: "+130 XP" }
+        { label: "Mentalidad de inversión", xp: "+120 XP" },
+        { label: "Simulador interactivo", xp: "+130 XP" },
+        { label: "Blindaje contra deudas", xp: "+120 XP" },
+        { label: "Independencia futura", xp: "+130 XP" }
       ],
       unlockedReward: "Insignia: Estratega Financiero 💎"
     }
@@ -131,7 +134,7 @@ export default function Aprende() {
                 transition={{ duration: 0.45, delay: idx * 0.12 }}
                 onMouseEnter={() => setActiveCard(idx)}
                 onMouseLeave={() => setActiveCard(null)}
-                className={`group relative rounded-2xl sm:rounded-3xl bg-white border-2 p-4 sm:p-6 lg:p-7 shadow-md transition-all duration-300 flex flex-col justify-between hover:-translate-y-1.5 hover:shadow-xl ${lvl.accentBorder}`}
+                className={`group relative rounded-2xl sm:rounded-3xl bg-white border-2 p-4 sm:p-5 lg:p-6 shadow-md transition-all duration-300 flex flex-col justify-between hover:-translate-y-1.5 hover:shadow-xl ${lvl.accentBorder}`}
               >
                 {/* Gamified Top Corner Floating Ribbon */}
                 {lvl.isPopular && (
@@ -147,35 +150,29 @@ export default function Aprende() {
                 <div className={`absolute inset-x-0 top-0 h-24 sm:h-32 rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-b ${lvl.glowBg} pointer-events-none opacity-80`} />
 
                 <div className="relative z-10">
-                  {/* Top Level and Badges Row */}
-                  <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
-                    <span className={`inline-flex items-center gap-1 text-[11px] sm:text-xs font-black tracking-wide uppercase px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl border shadow-2xs ${lvl.badgeColor}`}>
+                  {/* Top Level and Rank Row */}
+                  <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+                    <span className={`inline-flex items-center gap-1 text-[11px] sm:text-xs font-black tracking-wide uppercase px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg sm:rounded-xl border shadow-2xs ${lvl.badgeColor}`}>
                       <Zap className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       {lvl.levelNumber} • {lvl.ageRange}
                     </span>
 
-                    <div className="flex items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-extrabold text-slate-700 bg-slate-100/90 border border-slate-200/80 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg">
-                        <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-amber-500 fill-amber-500" />
-                        {lvl.xpBadge}
-                      </span>
-                    </div>
+                    <span className="text-[10px] sm:text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
+                      {lvl.levelRank}
+                    </span>
                   </div>
 
-                  {/* Level Header with Gamified Icon & Rank */}
-                  <div className="flex items-start gap-2.5 sm:gap-3.5 mb-3 sm:mb-4">
+                  {/* Level Header with Icon & Title */}
+                  <div className="flex items-center gap-2.5 sm:gap-3.5 mb-2 sm:mb-3">
                     <motion.div 
                       animate={isHovered ? { scale: 1.08, rotate: [0, -4, 4, 0] } : { scale: 1, rotate: 0 }}
                       transition={{ duration: 0.35 }}
-                      className={`h-10 w-10 sm:h-12 sm:w-12 shrink-0 rounded-xl sm:rounded-2xl ${lvl.iconBg} flex items-center justify-center shadow-md`}
+                      className={`h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-xl sm:rounded-2xl ${lvl.iconBg} flex items-center justify-center shadow-md`}
                     >
-                      <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                      <Icon className="h-5 w-5 sm:h-5.5 sm:w-5.5" />
                     </motion.div>
 
                     <div className="flex-1 min-w-0">
-                      <span className="inline-block text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-500">
-                        {lvl.levelRank}
-                      </span>
                       <h3 className="text-base sm:text-lg lg:text-xl font-black text-slate-900 tracking-tight leading-snug">
                         {lvl.title}
                       </h3>
@@ -185,113 +182,78 @@ export default function Aprende() {
                     </div>
                   </div>
 
-                  {/* Visual Progress Bar / Mastery Level */}
-                  <div className="bg-slate-100/80 p-2 sm:p-2.5 rounded-xl border border-slate-200/60 mb-3 sm:mb-5">
-                    <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-black text-slate-600 mb-1">
-                      <span className="flex items-center gap-1">
-                        <Target className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-emerald-600" /> Nivel de Dominio
-                      </span>
-                      <span className="text-slate-800 font-extrabold">{lvl.progressBar}% Habilidades</span>
-                    </div>
-                    <div className="w-full h-2 sm:h-2.5 bg-slate-200 rounded-full overflow-hidden p-0.5">
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        whileInView={{ width: `${lvl.progressBar}%` }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.8, delay: 0.2 }}
-                        className={`h-full rounded-full ${
-                          lvl.themeColor === 'sky' 
-                            ? 'bg-gradient-to-r from-sky-400 to-sky-600' 
-                            : lvl.themeColor === 'emerald'
-                            ? 'bg-gradient-to-r from-emerald-400 to-teal-600'
-                            : 'bg-gradient-to-r from-amber-400 to-orange-500'
-                        }`}
-                      />
-                    </div>
-                  </div>
+                  {/* Figura protagónica al medio y más grande */}
+                  {lvl.image && (
+                    <div className="relative my-2 sm:my-3.5 flex items-center justify-center">
+                      {/* Aura suave de color detrás de la figura */}
+                      <div className={`absolute w-36 h-36 sm:w-44 sm:h-44 lg:w-48 lg:h-48 rounded-full ${lvl.glowCircle} blur-xl pointer-events-none opacity-65`} />
 
-                  {/* Interactive Missions / Key points */}
-                  <div className="space-y-2 sm:space-y-2.5 pt-0.5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                        <Award className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-700" />
-                        Misiones de Aprendizaje:
+                      <motion.div 
+                        whileHover={{ scale: 1.08, rotate: [0, -2, 2, 0] }}
+                        transition={{ type: "spring", stiffness: 300, damping: 16 }}
+                        className="relative z-10 cursor-pointer flex items-center justify-center"
+                      >
+                        <FastImage
+                          src={lvl.image}
+                          alt={`Personaje ${lvl.title}`}
+                          priority={idx === 0}
+                          containerClassName="h-36 w-36 sm:h-44 sm:w-44 lg:h-48 lg:w-48 flex items-center justify-center"
+                          className="h-full w-full object-contain drop-shadow-xl filter hover:brightness-105 transition-all duration-300 select-none"
+                        />
+                      </motion.div>
+                    </div>
+                  )}
+
+                  {/* Misiones de Aprendizaje sutiles con pocas letras */}
+                  <div className="space-y-1.5 sm:space-y-2 pt-1 border-t border-slate-100/90">
+                    <div className="flex items-center justify-between px-0.5">
+                      <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <Award className="h-3 w-3 text-slate-400" />
+                        Misiones clave:
                       </p>
-                      <span className="text-[9px] sm:text-[10px] font-bold text-slate-400">
+                      <span className="text-[9px] sm:text-[10px] font-medium text-slate-400">
                         {lvl.missions.length} logros
                       </span>
                     </div>
 
-                    <div className="flex items-start gap-2 sm:gap-3">
-                      <ul className="space-y-1.5 sm:space-y-2 flex-1 min-w-0">
-                        {lvl.missions.map((mission, mIdx) => {
-                          const itemKey = `${lvl.id}-${mIdx}`;
-                          const isDone = completedItems[itemKey];
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                      {lvl.missions.map((mission, mIdx) => {
+                        const itemKey = `${lvl.id}-${mIdx}`;
+                        const isDone = completedItems[itemKey];
 
-                          return (
-                            <li 
-                              key={mIdx} 
-                              onClick={() => toggleItem(itemKey)}
-                              className={`group/item flex items-start gap-1.5 sm:gap-2 text-[11px] sm:text-[13px] p-1 sm:p-1.5 rounded-lg cursor-pointer transition-all duration-200 select-none ${
-                                isDone 
-                                  ? 'bg-emerald-50 text-emerald-950 font-bold border border-emerald-200' 
-                                  : 'text-slate-700 hover:bg-slate-50 font-medium'
-                              }`}
-                            >
-                              <div className={`h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 rounded-full flex items-center justify-center mt-0.5 transition-all ${
-                                isDone 
-                                  ? 'bg-emerald-600 text-white' 
-                                  : 'bg-emerald-100 text-emerald-700 group-hover/item:bg-emerald-200'
-                              }`}>
-                                <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 stroke-[3]" />
-                              </div>
-                              <div className="flex-1 min-w-0 leading-tight sm:leading-snug">
-                                <span>{mission.label}</span>
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-
-                      {/* Character image with instant cached loading & interactive bounce */}
-                      {lvl.image && (
-                        <div className="shrink-0 flex items-center justify-center self-center">
-                          <motion.div
-                            whileHover={{ scale: 1.1, rotate: [0, -3, 3, 0] }}
-                            transition={{ type: "spring", stiffness: 300, damping: 15 }}
-                            className="cursor-pointer"
+                        return (
+                          <div 
+                            key={mIdx} 
+                            onClick={() => toggleItem(itemKey)}
+                            className={`flex items-center gap-1.5 p-1.5 sm:p-2 rounded-xl border text-left cursor-pointer transition-all duration-200 select-none ${
+                              isDone 
+                                ? 'bg-emerald-50 text-emerald-950 font-bold border-emerald-300 shadow-2xs' 
+                                : 'bg-slate-50/90 hover:bg-slate-100/90 text-slate-700 font-medium border-slate-200/70'
+                            }`}
                           >
-                            <FastImage
-                              src={lvl.image}
-                              alt={`Personaje ${lvl.title}`}
-                              priority={idx === 0}
-                              containerClassName="h-20 w-20 sm:h-28 sm:w-28 lg:h-32 lg:w-32 flex items-center justify-center"
-                              className="h-full w-full object-contain drop-shadow-md filter hover:brightness-105"
-                            />
-                          </motion.div>
-                        </div>
-                      )}
+                            <div className={`h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 rounded-full flex items-center justify-center transition-all ${
+                              isDone 
+                                ? 'bg-emerald-600 text-white' 
+                                : 'bg-emerald-100 text-emerald-700'
+                            }`}>
+                              <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 stroke-[3]" />
+                            </div>
+                            <span className="text-[11px] sm:text-xs leading-tight truncate">
+                              {mission.label}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
 
-                {/* Gamified Reward Unlock Footer */}
-                <div className="relative z-10 mt-4 sm:mt-6 pt-2.5 sm:pt-3.5 border-t border-slate-100/90 flex flex-col gap-1.5 sm:gap-2">
-                  <div className="flex items-center justify-between text-[10px] sm:text-xs bg-slate-50 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg sm:rounded-xl border border-slate-200/70">
-                    <span className="text-[10px] sm:text-[11px] font-extrabold text-slate-800 flex items-center gap-1.5 truncate">
-                      {lvl.unlockedReward}
-                    </span>
-                    <span className="shrink-0 text-[9px] sm:text-[10px] font-black uppercase text-emerald-700 bg-emerald-100 px-1.5 py-0.5 sm:px-2 rounded-md">
-                      Desbloqueado
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-slate-500 px-1 pt-0.5">
-                    <span className="text-emerald-700 font-extrabold flex items-center gap-1">
-                      <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Todo incluido en el kit
-                    </span>
-                    <span className="text-slate-400">Acceso vitalicio</span>
-                  </div>
+                {/* Card Footer Clean */}
+                <div className="relative z-10 mt-3 sm:mt-4 pt-2.5 border-t border-slate-100/90 flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-slate-500">
+                  <span className="text-emerald-700 font-extrabold flex items-center gap-1">
+                    <Check className="h-3.5 w-3.5 stroke-[3]" /> Todo incluido en el kit
+                  </span>
+                  <span className="text-slate-400 font-medium">Acceso vitalicio</span>
                 </div>
               </motion.div>
             );
