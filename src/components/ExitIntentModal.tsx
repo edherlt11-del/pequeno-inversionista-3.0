@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Clock, Sparkles } from 'lucide-react';
+import { X, Clock } from 'lucide-react';
 import { handleHotmartCheckout } from '../utils/checkout';
 
 const MODAL_IMAGE_URL = "https://i.postimg.cc/pL0ZHJMH/Chat-GPT-Image-30-ago-2026-18-18-32-(1).jpg";
@@ -14,7 +14,6 @@ const COUNTDOWN_SECONDS = 50;
 export default function ExitIntentModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState(COUNTDOWN_SECONDS);
-  const [hasTriggered, setHasTriggered] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const hasTriggeredRef = useRef(false);
 
@@ -29,16 +28,9 @@ export default function ExitIntentModal() {
   const triggerExitIntent = useCallback(() => {
     if (hasTriggeredRef.current) return;
     hasTriggeredRef.current = true;
-    setHasTriggered(true);
     setTimeLeft(COUNTDOWN_SECONDS);
     setIsOpen(true);
   }, []);
-
-  // Manual trigger for testing/preview anytime
-  const forceOpenModal = () => {
-    setTimeLeft(COUNTDOWN_SECONDS);
-    setIsOpen(true);
-  };
 
   // Close modal
   const closeModal = () => {
@@ -94,10 +86,7 @@ export default function ExitIntentModal() {
     // 3. Page visibility change (tab switch / window unfocus)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && !hasTriggeredRef.current) {
-        // Will show when they come back
-        hasTriggeredRef.current = true;
-        setHasTriggered(true);
-        setIsOpen(true);
+        triggerExitIntent();
       }
     };
 
@@ -145,26 +134,8 @@ export default function ExitIntentModal() {
   };
 
   return (
-    <>
-      {/* Floating preview badge for testing exit-intent easily in preview mode */}
-      <div className="fixed bottom-4 right-4 z-40">
-        <button
-          onClick={forceOpenModal}
-          id="btn-test-exit-intent"
-          className="group flex items-center gap-2 rounded-full bg-slate-900/90 hover:bg-slate-950 text-white text-xs font-bold px-3.5 py-2 shadow-lg backdrop-blur-md border border-slate-700/80 transition-all hover:scale-105 active:scale-95"
-          title="Haz clic para probar el Pop-up de Intención de Salida en cualquier momento"
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          <span>Probar Pop-up Salida</span>
-        </button>
-      </div>
-
-      {/* Modal and backdrop with AnimatePresence */}
-      <AnimatePresence>
-        {isOpen && (
+    <AnimatePresence>
+      {isOpen && (
           <div 
             className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
             id="exit-intent-modal-overlay"
@@ -344,6 +315,5 @@ export default function ExitIntentModal() {
           </div>
         )}
       </AnimatePresence>
-    </>
   );
 }
