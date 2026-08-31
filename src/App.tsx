@@ -6,7 +6,6 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
-import ExitIntentModal from './components/ExitIntentModal';
 import { preloadImages } from './components/ui/FastImage';
 
 const CRITICAL_ILLUSTRATIONS = [
@@ -17,7 +16,7 @@ const CRITICAL_ILLUSTRATIONS = [
   "https://i.postimg.cc/jSmG3wD2/Chat-GPT-Image-25-ago-2026-18-07-51-removebg-preview.png",
   "https://i.postimg.cc/Ss2LTRzx/Chat-GPT-Image-25-ago-2026-18-16-40-removebg-preview.png",
   "https://i.postimg.cc/qRVgrv5C/Chat-GPT-Image-25-ago-2026-18-22-39-removebg-preview.png",
-  "https://i.postimg.cc/VNCggRrk/Chat-GPT-Image-27-ago-2026-20-44-28-removebg-preview-(1).png"
+  "https://i.postimg.cc/pL0ZHJMH/Chat-GPT-Image-30-ago-2026-18-18-32-(1).jpg"
 ];
 
 // Below-the-fold components loaded dynamically for maximum initial load performance
@@ -30,6 +29,7 @@ const FAQ = lazy(() => import('./components/FAQ'));
 const Pricing = lazy(() => import('./components/Pricing'));
 const Footer = lazy(() => import('./components/Footer'));
 const SalesPopups = lazy(() => import('./components/SalesPopups'));
+const ExitIntentModal = lazy(() => import('./components/ExitIntentModal'));
 
 export default function App() {
   useEffect(() => {

@@ -3,48 +3,63 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ArrowRight } from 'lucide-react';
+import { X, Clock, Sparkles } from 'lucide-react';
 import { handleHotmartCheckout } from '../utils/checkout';
 
-const PUPPY_IMAGE_URL = "https://i.postimg.cc/VNCggRrk/Chat-GPT-Image-27-ago-2026-20-44-28-removebg-preview-(1).png";
-
-declare global {
-  interface Window {
-    openExitIntentModal?: () => void;
-  }
-}
+const MODAL_IMAGE_URL = "https://i.postimg.cc/pL0ZHJMH/Chat-GPT-Image-30-ago-2026-18-18-32-(1).jpg";
+const COUNTDOWN_SECONDS = 50;
 
 export default function ExitIntentModal() {
   const [isOpen, setIsOpen] = useState(false);
-  const [countdown, setCountdown] = useState(10);
+  const [timeLeft, setTimeLeft] = useState(COUNTDOWN_SECONDS);
+  const [hasTriggered, setHasTriggered] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const hasTriggeredRef = useRef(false);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const openModal = useCallback(() => {
+  // Preload modal image immediately
+  useEffect(() => {
+    const img = new Image();
+    img.src = MODAL_IMAGE_URL;
+    img.referrerPolicy = 'no-referrer';
+  }, []);
+
+  // Open modal trigger handler
+  const triggerExitIntent = useCallback(() => {
     if (hasTriggeredRef.current) return;
     hasTriggeredRef.current = true;
+    setHasTriggered(true);
+    setTimeLeft(COUNTDOWN_SECONDS);
     setIsOpen(true);
-    setCountdown(10);
   }, []);
 
-  const handleClose = useCallback(() => {
+  // Manual trigger for testing/preview anytime
+  const forceOpenModal = () => {
+    setTimeLeft(COUNTDOWN_SECONDS);
+    setIsOpen(true);
+  };
+
+  // Close modal
+  const closeModal = () => {
     setIsOpen(false);
-    hasTriggeredRef.current = true;
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
-  }, []);
+  };
 
-  // 10 to 0 seconds countdown for the gentle pause
+  // 20-Second Countdown timer
   useEffect(() => {
     if (!isOpen) return;
 
-    timerIntervalRef.current = setInterval(() => {
-      setCountdown((prev) => {
+    // Reset countdown to 20 seconds when opened
+    setTimeLeft(COUNTDOWN_SECONDS);
+
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
         if (prev <= 1) {
-          if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+          if (timerRef.current) clearInterval(timerRef.current);
           return 0;
         }
         return prev - 1;
@@ -52,289 +67,283 @@ export default function ExitIntentModal() {
     }, 1000);
 
     return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
       }
     };
   }, [isOpen]);
 
-  // Handle ESC key
+  // Exit-intent mouse tracking
+  useEffect(() => {
+    // 1. Mouse leaving towards top of browser window / tab bar
+    const handleMouseLeave = (e: MouseEvent) => {
+      // clientY <= 15 means cursor moved up to the browser chrome / tab bar
+      if (e.clientY <= 15 && !hasTriggeredRef.current) {
+        triggerExitIntent();
+      }
+    };
+
+    // 2. Mouse moving fast towards top boundary
+    const handleMouseMove = (e: MouseEvent) => {
+      if (e.clientY <= 8 && !hasTriggeredRef.current) {
+        triggerExitIntent();
+      }
+    };
+
+    // 3. Page visibility change (tab switch / window unfocus)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && !hasTriggeredRef.current) {
+        // Will show when they come back
+        hasTriggeredRef.current = true;
+        setHasTriggered(true);
+        setIsOpen(true);
+      }
+    };
+
+    // 4. Mobile exit intent detection: scroll up rapidly after scrolling down or after 25s
+    let lastScrollY = window.scrollY;
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      // If user scrolled down at least 500px and then scrolls up aggressively
+      if (lastScrollY > 600 && currentScrollY < 200 && !hasTriggeredRef.current) {
+        triggerExitIntent();
+      }
+      lastScrollY = currentScrollY;
+    };
+
+    document.addEventListener('mouseleave', handleMouseLeave);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [triggerExitIntent]);
+
+  // Keyboard shortcut (Escape to close)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
-        handleClose();
+        closeModal();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, handleClose]);
+  }, [isOpen]);
 
-  // Exit intent detection logic (Desktop + Mobile)
-  useEffect(() => {
-    // Expose test helper in window for preview / QA
-    window.openExitIntentModal = () => {
-      openModal();
-    };
+  // Format seconds into 00:SS
+  const formattedSeconds = timeLeft < 10 ? `0${timeLeft}` : `${timeLeft}`;
+  const progressPercent = ((COUNTDOWN_SECONDS - timeLeft) / COUNTDOWN_SECONDS) * 100;
 
-    let canTrigger = false;
-    let hasMovedIntoPage = false;
-
-    // Small delay (400ms) to ensure page has mounted and avoid instant trigger on load
-    const armTimer = setTimeout(() => {
-      canTrigger = true;
-    }, 400);
-
-    // Desktop 1: detect mouse moving to the top of viewport (clientY <= 10)
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!canTrigger || hasTriggeredRef.current) return;
-
-      // Track that user has moved cursor into the main area
-      if (e.clientY > 35) {
-        hasMovedIntoPage = true;
-      }
-
-      // Trigger if cursor reaches top boundary (<= 10px) after having moved in page
-      if (hasMovedIntoPage && e.clientY <= 10) {
-        openModal();
-      }
-    };
-
-    // Desktop 2: detect cursor leaving document towards the top
-    const handleMouseLeave = (e: MouseEvent) => {
-      if (!canTrigger || hasTriggeredRef.current) return;
-      if (e.clientY <= 20 || e.clientY <= 0) {
-        openModal();
-      }
-    };
-
-    // Desktop 3: detect mouseout when leaving window/iframe towards the top
-    const handleMouseOut = (e: MouseEvent) => {
-      if (!canTrigger || hasTriggeredRef.current) return;
-      const toElement = e.relatedTarget || (e as unknown as { toElement?: Element }).toElement;
-      if (!toElement && (e.clientY <= 25 || e.clientY <= 0)) {
-        openModal();
-      }
-    };
-
-    // Mobile: detection via history popstate / back button
-    const handlePopState = () => {
-      if (canTrigger && !hasTriggeredRef.current) {
-        openModal();
-        try {
-          window.history.pushState({ exitIntentShown: true }, '');
-        } catch {
-          // Ignore
-        }
-      }
-    };
-
-    // Push state after 1.5s to capture mobile back button
-    const historyTimer = setTimeout(() => {
-      try {
-        if (!hasTriggeredRef.current && window.history && window.history.pushState) {
-          window.history.pushState({ page: 'pequeno-inversionista' }, '');
-          window.addEventListener('popstate', handlePopState);
-        }
-      } catch {
-        // Ignore
-      }
-    }, 1500);
-
-    // Mobile: rapid scroll-up after scrolling down into page
-    let maxScroll = 0;
-    let lastScrollY = window.scrollY;
-
-    const handleScroll = () => {
-      if (!canTrigger || hasTriggeredRef.current) return;
-      const currentY = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const scrollPercentage = docHeight > 0 ? (currentY / docHeight) * 100 : 0;
-
-      if (scrollPercentage > maxScroll) {
-        maxScroll = scrollPercentage;
-      }
-
-      // If user explored > 30% and then scrolls back towards top
-      if (maxScroll > 30 && currentY < 60 && lastScrollY - currentY > 40) {
-        openModal();
-      }
-      lastScrollY = currentY;
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseleave', handleMouseLeave);
-    document.documentElement.addEventListener('mouseleave', handleMouseLeave);
-    window.addEventListener('mouseout', handleMouseOut);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      clearTimeout(armTimer);
-      clearTimeout(historyTimer);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseleave', handleMouseLeave);
-      document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
-      window.removeEventListener('mouseout', handleMouseOut);
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('popstate', handlePopState);
-      delete window.openExitIntentModal;
-    };
-  }, [openModal]);
+  const handleCheckoutClick = (e: React.MouseEvent) => {
+    handleHotmartCheckout(e);
+  };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div
-          className="exit-intent-overlay fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-slate-950/75 backdrop-blur-xs"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              handleClose();
-            }
-          }}
+    <>
+      {/* Floating preview badge for testing exit-intent easily in preview mode */}
+      <div className="fixed bottom-4 right-4 z-40">
+        <button
+          onClick={forceOpenModal}
+          id="btn-test-exit-intent"
+          className="group flex items-center gap-2 rounded-full bg-slate-900/90 hover:bg-slate-950 text-white text-xs font-bold px-3.5 py-2 shadow-lg backdrop-blur-md border border-slate-700/80 transition-all hover:scale-105 active:scale-95"
+          title="Haz clic para probar el Pop-up de Intención de Salida en cualquier momento"
         >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.94, y: 15 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.94, y: 10 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="exit-intent-modal relative w-full max-w-[540px] max-h-[92vh] flex flex-col rounded-3xl bg-white border border-slate-100 shadow-2xl overflow-hidden text-slate-800"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Top Close Button (X) */}
-            <button
-              type="button"
-              onClick={handleClose}
-              aria-label="Cerrar ventana"
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 h-8 w-8 rounded-full bg-slate-100/90 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer shadow-xs"
-            >
-              <X className="h-4 w-4 stroke-[2.5]" />
-            </button>
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span>Probar Pop-up Salida</span>
+        </button>
+      </div>
 
-            {/* Scrollable container for mobile responsiveness */}
-            <div className="overflow-y-auto p-4 sm:p-6 sm:px-7 overscroll-contain">
-              
-              {/* 2. Encabezado sutil: Pausa de 10 segundos con recuento de 10 a 0 */}
-              <div className="exit-intent-header flex flex-col items-center gap-1.5 pt-1 mb-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-xs font-extrabold shadow-2xs">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                  </span>
-                  <span>
-                    ¡Pausa de {countdown} {countdown === 1 ? 'segundo' : 'segundos'} antes de irte!
-                  </span>
+      {/* Modal and backdrop with AnimatePresence */}
+      <AnimatePresence>
+        {isOpen && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+            id="exit-intent-modal-overlay"
+          >
+            {/* Darkened blurred backdrop behind the modal */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={closeModal}
+              className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"
+              aria-hidden="true"
+            />
+
+            {/* Compact Modal Container */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 16 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 320 }}
+              className="relative w-full max-w-[460px] max-h-[95vh] bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-10 my-auto text-slate-800 flex flex-col"
+              id="exit-intent-modal-content"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="exit-modal-title"
+            >
+              {/* Top Urgency Header with Countdown & Close Button */}
+              <div className="bg-slate-900 text-white px-3.5 py-2 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-1.5 text-xs font-bold">
+                  <Clock className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
+                  <span className="text-[10px] sm:text-[11px] font-black tracking-wide text-slate-200">OFERTA EXPIRA EN:</span>
+                  <span className="font-mono text-amber-300 font-black text-xs sm:text-sm">00:{formattedSeconds}</span>
                 </div>
-                {/* Visual smooth progress track */}
-                <div className="w-36 h-1 bg-amber-100/80 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-amber-500 rounded-full transition-all duration-1000 ease-linear"
-                    style={{ width: `${(countdown / 10) * 100}%` }}
-                  />
+                <div className="flex items-center gap-2">
+                  <span className="bg-emerald-500/95 text-white text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    68% DESCUENTO
+                  </span>
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    id="btn-close-exit-modal"
+                    aria-label="Cerrar modal"
+                    className="h-6 w-6 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors focus:outline-none"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </div>
 
-              {/* 1. Imagen del perrito - Elemento visual principal */}
-              <div className="flex justify-center my-1 sm:my-2">
-                <img
-                  src={PUPPY_IMAGE_URL}
-                  alt="Perrito Pequeño Inversionista"
-                  className="exit-intent-image h-32 sm:h-40 w-auto object-contain drop-shadow-md select-none pointer-events-none"
-                  referrerPolicy="no-referrer"
-                  loading="eager"
+              {/* Countdown Progress Bar */}
+              <div className="h-1 w-full bg-slate-800 overflow-hidden shrink-0">
+                <div 
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-1000 ease-linear"
+                  style={{ width: `${100 - progressPercent}%` }}
                 />
               </div>
 
-              {/* 3. Contenido principal debajo de la imagen */}
-              <div className="exit-intent-content text-center space-y-1.5 sm:space-y-2 mt-1">
-                <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
-                  Prepara a tu hijo para el mundo real. 💼
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed max-w-md mx-auto">
-                  Dale las herramientas para ahorrar de forma inteligente, tomar decisiones financieras audaces y asegurar su independencia futura.
-                </p>
-                <p className="text-xs sm:text-sm font-extrabold text-emerald-700">
-                  Invierte hoy en su éxito del mañana.
-                </p>
-              </div>
+              {/* Scrollable / Compact Body Container */}
+              <div className="overflow-y-auto overflow-x-hidden flex-1">
+                {/* Large Image - 100% complete, uncropped, sin contorno */}
+                <div className="w-full bg-white pt-3 pb-1 px-4 flex items-center justify-center">
+                  <img
+                    src={MODAL_IMAGE_URL}
+                    alt="Educación financiera práctica para niños"
+                    className="w-auto h-auto max-h-[195px] sm:max-h-[225px] max-w-[92%] sm:max-w-[85%] object-contain mx-auto block select-none"
+                    referrerPolicy="no-referrer"
+                    loading="eager"
+                    decoding="async"
+                  />
+                </div>
 
-              {/* 4. Beneficios organizados en estructura visual compacta */}
-              <div className="exit-intent-benefits mt-3.5 pt-3 border-t border-slate-100">
-                <p className="text-[11px] sm:text-xs font-black text-slate-500 uppercase tracking-wider text-center mb-2">
-                  Todo lo que estás a punto de perder hoy:
-                </p>
-                <div className="grid grid-cols-2 gap-2 text-left">
-                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/80 rounded-xl p-2 sm:p-2.5">
-                    <span className="text-base shrink-0">🎁</span>
-                    <span className="text-[11px] sm:text-xs font-black text-slate-800 leading-tight">
-                      4 BONOS GRATIS
-                    </span>
+                {/* Modal Content - Vertically Compact */}
+                <div className="px-4 pb-4 sm:px-5 sm:pb-5 pt-1 space-y-3">
+                  
+                  {/* Titles */}
+                  <div className="text-center space-y-1">
+                    <h3 
+                      id="exit-modal-title"
+                      className="text-base sm:text-lg font-black tracking-tight text-slate-900 leading-snug"
+                    >
+                      ¿En serio vas a dejar pasar esta oportunidad para tu hijo?
+                    </h3>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                      Dale las herramientas y prepara a tu hijo para el mundo real. 💼
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/80 rounded-xl p-2 sm:p-2.5">
-                    <span className="text-base shrink-0">📚</span>
-                    <span className="text-[11px] sm:text-xs font-black text-slate-800 leading-tight">
-                      MÉTODO COMPLETO PASO A PASO
-                    </span>
+
+                  {/* Benefits Section Header */}
+                  <div className="pt-0.5">
+                    <div className="text-center">
+                      <span className="inline-block text-[10px] sm:text-[11px] font-black tracking-wider text-emerald-700 uppercase bg-emerald-50/90 border border-emerald-200/60 px-3 py-0.5 rounded-lg">
+                        TODO LO QUE ESTÁS A PUNTO DE OBTENER HOY:
+                      </span>
+                    </div>
+
+                    {/* 2-Column Benefits Grid with small elegant cards */}
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2 mt-1.5">
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl px-2 py-1.5 flex items-center gap-2 shadow-2xs hover:border-emerald-200 transition-colors">
+                        <span className="text-sm shrink-0 leading-none">🎁</span>
+                        <span className="text-[10px] sm:text-[11px] font-black text-slate-800 tracking-tight leading-tight">
+                          4 BONOS GRATIS
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl px-2 py-1.5 flex items-center gap-2 shadow-2xs hover:border-emerald-200 transition-colors">
+                        <span className="text-sm shrink-0 leading-none">📚</span>
+                        <span className="text-[10px] sm:text-[11px] font-black text-slate-800 tracking-tight leading-tight">
+                          MÉTODO COMPLETO PASO A PASO
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl px-2 py-1.5 flex items-center gap-2 shadow-2xs hover:border-emerald-200 transition-colors">
+                        <span className="text-sm shrink-0 leading-none">♾️</span>
+                        <span className="text-[10px] sm:text-[11px] font-black text-slate-800 tracking-tight leading-tight">
+                          ACCESO VITALICIO 24/7
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl px-2 py-1.5 flex items-center gap-2 shadow-2xs hover:border-emerald-200 transition-colors">
+                        <span className="text-sm shrink-0 leading-none">🛡️</span>
+                        <span className="text-[10px] sm:text-[11px] font-black text-slate-800 tracking-tight leading-tight">
+                          GARANTÍA DE 7 DÍAS
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/80 rounded-xl p-2 sm:p-2.5">
-                    <span className="text-base shrink-0">♾️</span>
-                    <span className="text-[11px] sm:text-xs font-black text-slate-800 leading-tight">
-                      ACCESO VITALICIO 24/7
-                    </span>
+
+                  {/* Price Section */}
+                  <div className="bg-slate-50/90 border border-slate-200/70 rounded-xl py-1.5 px-3 flex items-center justify-center gap-3">
+                    <div className="text-right">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block leading-none">
+                        Antes
+                      </span>
+                      <span className="text-xs font-semibold text-slate-400 line-through">
+                        $37 USD
+                      </span>
+                    </div>
+
+                    <div className="h-5 w-px bg-slate-200" />
+
+                    <div className="text-left flex items-baseline gap-1.5">
+                      <span className="text-[10px] font-black text-emerald-700 uppercase leading-none">
+                        HOY
+                      </span>
+                      <span className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight leading-none">
+                        $12 USD
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/80 rounded-xl p-2 sm:p-2.5">
-                    <span className="text-base shrink-0">🛡️</span>
-                    <span className="text-[11px] sm:text-xs font-black text-slate-800 leading-tight">
-                      GARANTÍA DE 7 DÍAS
-                    </span>
+
+                  {/* CTA Call to Action Button */}
+                  <div className="space-y-1.5 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={handleCheckoutClick}
+                      id="btn-exit-intent-checkout"
+                      className="w-full py-2.5 sm:py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white font-black text-sm sm:text-base tracking-wide shadow-md shadow-emerald-500/25 hover:shadow-emerald-500/35 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span>SÍ, QUIERO ENSEÑARLE FINANZAS →</span>
+                    </button>
+
+                    {/* Discreet humorous rejection link */}
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      id="btn-exit-intent-dismiss"
+                      className="w-full text-center text-[10px] sm:text-[11px] text-slate-400 hover:text-slate-600 transition-colors py-0.5 block cursor-pointer underline-offset-2 hover:underline"
+                    >
+                      No, prefiero que aprenda a golpes con el dinero 😬
+                    </button>
                   </div>
+
                 </div>
               </div>
-
-              {/* 5. Precio */}
-              <div className="exit-intent-price text-center mt-3 sm:mt-4">
-                <span className="text-xs text-slate-400 line-through font-semibold block">
-                  Antes $37 USD
-                </span>
-                <div className="flex items-baseline justify-center gap-1.5 mt-0.5">
-                  <span className="text-xs font-black text-slate-500 uppercase">HOY</span>
-                  <span className="text-3xl sm:text-4xl font-black text-emerald-600 tracking-tight">
-                    $12
-                  </span>
-                  <span className="text-sm sm:text-base font-extrabold text-slate-700">
-                    USD
-                  </span>
-                </div>
-              </div>
-
-              {/* 6. Botón Principal CTA */}
-              <div className="mt-3">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    handleClose();
-                    handleHotmartCheckout(e);
-                  }}
-                  className="exit-intent-cta w-full py-3.5 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-black text-sm sm:text-base tracking-wide shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <span>SÍ, QUIERO ENSEÑARLE FINANZAS</span>
-                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
-                </button>
-              </div>
-
-              {/* 7. Opción para cerrar discreta */}
-              <div className="text-center mt-2.5">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="exit-intent-dismiss text-[11px] sm:text-xs text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2 cursor-pointer font-medium"
-                >
-                  No, prefiero que aprenda a golpes con el dinero 😬
-                </button>
-              </div>
-
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
